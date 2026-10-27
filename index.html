@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>장학금 일정 관리</title>
+<style>
+:root{--navy:#183b66;--blue:#2563eb;--pale:#eef4ff;--line:#dbe3ef;--text:#172033;--muted:#64748b;--red:#b42318;--green:#18794e}
+*{box-sizing:border-box}
+body{margin:0;background:#f4f7fb;color:var(--text);font-family:"Malgun Gothic","Apple SD Gothic Neo",Arial,sans-serif;line-height:1.5}
+.wrap{max-width:1040px;margin:0 auto;padding:28px 18px 48px}
+header{background:linear-gradient(135deg,#173b67,#2563eb);color:white;padding:28px;border-radius:18px;margin-bottom:20px}
+header h1{margin:0 0 6px;font-size:clamp(24px,4vw,34px)}header p{margin:0;color:#e6efff}
+.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:18px 0}
+.stat,.panel{background:white;border:1px solid var(--line);border-radius:14px;padding:18px}
+.stat span{display:block;color:var(--muted);font-size:14px}.stat strong{font-size:28px}
+.panel{margin-top:16px}.panel h2{font-size:19px;margin:0 0 14px}
+.formgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.field{display:flex;flex-direction:column;gap:6px}.field.full{grid-column:1/-1}
+label{font-weight:700;font-size:14px}
+input,textarea{font:inherit;width:100%;border:1px solid #cbd5e1;border-radius:9px;padding:11px 12px;background:white;color:var(--text)}
+textarea{min-height:76px;resize:vertical}
+input:focus,textarea:focus{outline:3px solid #dbeafe;border-color:var(--blue)}
+.hint{font-size:12px;color:var(--muted)}
+.actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:14px}
+button{font:inherit;font-weight:700;border:0;border-radius:9px;padding:10px 14px;cursor:pointer}
+.primary{background:var(--blue);color:white}.secondary{background:#e8eef7;color:#23344d}.danger{background:#fff0ef;color:var(--red)}button:focus-visible{outline:3px solid #93c5fd;outline-offset:2px}
+.notice{display:none;border-radius:10px;padding:11px 13px;margin:12px 0;font-size:14px}.notice.show{display:block}.notice.error{background:#fff0ef;color:#912018}.notice.success{background:#eaf8f0;color:#16633d}.notice.info{background:#eef4ff;color:#1d4ed8}
+.listhead{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.items{display:flex;flex-direction:column;gap:12px;margin-top:14px}
+.item{border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;background:white}
+.item.done{background:#f8fafc}.item.done .item-title{text-decoration:line-through;color:#64748b}
+.item-title{font-size:17px;font-weight:800;margin:0 0 6px;overflow-wrap:anywhere}
+.meta{display:flex;flex-wrap:wrap;gap:7px 14px;color:#475569;font-size:13px}.meta a{color:#1d4ed8;overflow-wrap:anywhere}
+.badge{display:inline-block;font-size:12px;font-weight:800;padding:3px 8px;border-radius:99px;background:#e8eef7;color:#334155;margin-left:6px}
+.badge.urgent{background:#fff0ef;color:#b42318}.badge.today{background:#ffedd5;color:#9a3412}.badge.donebadge{background:#dcfce7;color:#166534}
+.item-actions{display:flex;flex-direction:column;gap:7px;min-width:96px}
+.item-actions button{font-size:13px;padding:8px 10px}
+.empty{text-align:center;padding:34px 12px;color:var(--muted);border:1px dashed #cbd5e1;border-radius:12px;margin-top:14px}
+footer{color:var(--muted);font-size:12px;margin:16px 4px}
+@media(max-width:640px){.wrap{padding:14px 10px 30px}header{padding:22px 18px}.formgrid{grid-template-columns:1fr}.field.full{grid-column:auto}.item{grid-template-columns:1fr}.item-actions{flex-direction:row;flex-wrap:wrap}.stats{gap:8px}.stat{padding:14px}.stat strong{font-size:24px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>장학금 일정 관리</h1>
+  <p>마감일과 제출 서류를 한곳에서 확인하세요. 입력한 내용은 이 브라우저에 저장됩니다.</p>
+</header>
+<section class="stats" aria-label="일정 요약">
+  <div class="stat"><span>전체 일정</span><strong id="totalCount">0</strong></div>
+  <div class="stat"><span>미완료 일정</span><strong id="pendingCount">0</strong></div>
+</section>
+<section class="panel">
+  <h2>장학금 일정 등록</h2>
+  <form id="scheduleForm">
+    <div class="formgrid">
+      <div class="field">
+        <label for="scholarshipName">장학금 이름 *</label>
+        <input id="scholarshipName" name="scholarshipName" type="text" maxlength="120" required placeholder="예: 교내 성적우수 장학금">
+      </div>
+      <div class="field">
+        <label for="deadline">신청 마감일 *</label>
+        <input id="deadline" name="deadline" type="date" required>
+      </div>
+      <div class="field full">
+        <label for="documents">제출 서류</label>
+        <textarea id="documents" name="documents" maxlength="2000" placeholder="예: 신청서, 성적증명서, 자기소개서"></textarea>
+      </div>
+      <div class="field full">
+        <label for="homepage">장학금 관련 홈페이지 주소</label>
+        <input id="homepage" name="homepage" type="text" maxlength="500" placeholder="예: https://www.university.ac.kr">
+        <span class="hint">선택 입력입니다. 주소 앞의 https://를 생략해도 됩니다.</span>
+      </div>
+    </div>
+    <div id="notice" class="notice" role="status" aria-live="polite"></div>
+    <div class="actions">
+      <button class="primary" type="submit">일정 등록</button>
+      <button class="secondary" type="reset">입력 내용 지우기</button>
+    </div>
+  </form>
+</section>
+<section class="panel">
+  <div class="listhead">
+    <h2 style="margin:0">등록된 일정</h2>
+    <button id="deleteCompleted" class="danger" type="button">완료 일정 모두 삭제</button>
+  </div>
+  <div id="scheduleList" class="items"></div>
+</section>
+<footer>참고: 일정은 현재 브라우저의 로컬 저장소에 저장됩니다. 브라우저 설정이나 파일 열기 방식에 따라 저장이 제한될 수 있으므로 중요한 정보는 별도로 백업하세요.</footer>
+</div>
+<script>
+(function(){
+"use strict";
+const STORAGE_KEY = "scholarship_schedule_manager_v2";
+const form = document.getElementById("scheduleForm");
+const nameInput = document.getElementById("scholarshipName");
+const dateInput = document.getElementById("deadline");
+const docsInput = document.getElementById("documents");
+const homepageInput = document.getElementById("homepage");
+const list = document.getElementById("scheduleList");
+const notice = document.getElementById("notice");
+const totalCount = document.getElementById("totalCount");
+const pendingCount = document.getElementById("pendingCount");
+let schedules = [];
+let storageAvailable = true;
+
+function localDateString(date = new Date()){
+  const y = date.getFullYear();
+  const m = String(date.getMonth()+1).padStart(2,"0");
+  const d = String(date.getDate()).padStart(2,"0");
+  return `${y}-${m}-${d}`;
+}
+function showNotice(message, type="info"){
+  notice.textContent = message;
+  notice.className = "notice show " + type;
+}
+function clearNotice(){notice.textContent="";notice.className="notice";}
+function safeHomepage(raw){
+  const value = raw.trim();
+  if(!value) return {url:"", invalid:false};
+  let candidate = value;
+  if(!/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(candidate)) candidate = "https://" + candidate;
+  try{
+    const u = new URL(candidate);
+    if((u.protocol !== "https:" && u.protocol !== "http:") || !u.hostname || !u.hostname.includes(".")){
+      return {url:"",invalid:true};
+    }
+    return {url:u.href,invalid:false};
+  }catch(_){return {url:"",invalid:true};}
+}
+function saveSchedules(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(schedules));
+    storageAvailable = true;
+    return true;
+  }catch(_){
+    storageAvailable = false;
+    return false;
+  }
+}
+function loadSchedules(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      const parsed = JSON.parse(raw);
+      if(Array.isArray(parsed)){
+        schedules = parsed.filter(x => x && typeof x.id==="string" && typeof x.name==="string" && /^\d{4}-\d{2}-\d{2}$/.test(x.deadline))
+          .map(x => ({id:x.id,name:x.name,deadline:x.deadline,documents:typeof x.documents==="string"?x.documents:"",homepage:typeof x.homepage==="string"?x.homepage:"",done:!!x.done}));
+      }
+    }
+    storageAvailable = true;
+  }catch(_){storageAvailable = false;schedules=[];}
+}
+function daysUntil(dateString){
+  const [y,m,d] = dateString.split("-").map(Number);
+  const target = Date.UTC(y,m-1,d);
+  const now = new Date();
+  const today = Date.UTC(now.getFullYear(),now.getMonth(),now.getDate());
+  return Math.round((target-today)/86400000);
+}
+function removeExpired(){
+  const before = schedules.length;
+  schedules = schedules.filter(s => daysUntil(s.deadline) >= 0);
+  if(schedules.length !== before) saveSchedules();
+}
+function formatDate(s){return s.replaceAll("-",". ");}
+function render(){
+  removeExpired();
+  schedules.sort((a,b)=>a.deadline.localeCompare(b.deadline));
+  totalCount.textContent = String(schedules.length);
+  pendingCount.textContent = String(schedules.filter(s=>!s.done).length);
+  list.replaceChildren();
+  if(schedules.length===0){
+    const empty=document.createElement("div");
+    empty.className="empty";
+    empty.textContent="등록된 일정이 없습니다. 위에서 장학금 일정을 등록해 주세요.";
+    list.appendChild(empty);
+    return;
+  }
+  schedules.forEach(s=>{
+    const card=document.createElement("article");
+    card.className="item"+(s.done?" done":"");
+    const info=document.createElement("div");
+    const title=document.createElement("p");
+    title.className="item-title";
+    title.textContent=s.name;
+    const days=daysUntil(s.deadline);
+    const badge=document.createElement("span");
+    badge.className="badge"+(s.done?" donebadge":days===0?" today":days<=7?" urgent":"");
+    badge.textContent=s.done?"완료":days===0?"오늘 마감":`D-${days}`;
+    title.appendChild(badge);
+    info.appendChild(title);
+    const meta=document.createElement("div");meta.className="meta";
+    const deadline=document.createElement("span");deadline.textContent="마감일: "+formatDate(s.deadline);meta.appendChild(deadline);
+    if(s.documents){
+      const docs=document.createElement("span");docs.textContent="제출 서류: "+s.documents;meta.appendChild(docs);
+    }
+    if(s.homepage){
+      const link=document.createElement("a");link.href=s.homepage;link.target="_blank";link.rel="noopener noreferrer";link.textContent="관련 홈페이지 열기";meta.appendChild(link);
+    }
+    info.appendChild(meta);
+    const actions=document.createElement("div");actions.className="item-actions";
+    const toggle=document.createElement("button");toggle.type="button";toggle.className="secondary";toggle.textContent=s.done?"완료 취소":"완료 처리";
+    toggle.addEventListener("click",()=>{s.done=!s.done;saveSchedules();render();if(!storageAvailable)showNotice("브라우저 저장소에 접근할 수 없어 변경 내용이 현재 화면에만 유지될 수 있습니다.","error");});
+    const del=document.createElement("button");del.type="button";del.className="danger";del.textContent="삭제";
+    del.addEventListener("click",()=>{schedules=schedules.filter(x=>x.id!==s.id);saveSchedules();render();if(!storageAvailable)showNotice("저장 기능을 사용할 수 없습니다. 페이지를 닫으면 변경 내용이 사라질 수 있습니다.","error");});
+    actions.append(toggle,del);card.append(info,actions);list.appendChild(card);
+  });
+}
+form.addEventListener("submit",function(event){
+  event.preventDefault();clearNotice();
+  const name=nameInput.value.trim();
+  const deadline=dateInput.value;
+  if(!name){showNotice("장학금 이름을 입력해 주세요.","error");nameInput.focus();return;}
+  if(!deadline){showNotice("신청 마감일을 선택해 주세요.","error");dateInput.focus();return;}
+  if(deadline < localDateString()){showNotice("지난 날짜는 등록할 수 없습니다. 오늘 또는 미래 날짜를 선택해 주세요.","error");dateInput.focus();return;}
+  const home=safeHomepage(homepageInput.value);
+  schedules.push({id:(typeof crypto!=="undefined"&&crypto.randomUUID)?crypto.randomUUID():String(Date.now())+"-"+Math.random().toString(36).slice(2),name,deadline,documents:docsInput.value.trim(),homepage:home.url,done:false});
+  const saved=saveSchedules();
+  render();
+  form.reset();
+  if(!saved){
+    showNotice("일정은 화면에 등록했지만 브라우저 저장소를 사용할 수 없습니다. 파일을 닫으면 내용이 사라질 수 있습니다.","error");
+  }else if(home.invalid){
+    showNotice("일정은 등록했습니다. 홈페이지 주소 형식이 올바르지 않아 링크는 저장하지 않았습니다. 주소를 확인해 다시 등록할 수 있습니다.","info");
+  }else{
+    showNotice("장학금 일정이 등록되었습니다.","success");
+  }
+});
+form.addEventListener("reset",()=>{setTimeout(clearNotice,0);});
+document.getElementById("deleteCompleted").addEventListener("click",()=>{
+  const count=schedules.filter(s=>s.done).length;
+  if(count===0){showNotice("삭제할 완료 일정이 없습니다.","info");return;}
+  if(!confirm(`완료된 일정 ${count}개를 모두 삭제할까요?`))return;
+  schedules=schedules.filter(s=>!s.done);
+  const saved=saveSchedules();render();
+  showNotice(saved?"완료된 일정이 삭제되었습니다.":"완료된 일정을 화면에서 삭제했지만 저장소를 사용할 수 없습니다.","success");
+});
+window.addEventListener("error",function(){
+  showNotice("페이지 내부에서 오류가 발생했습니다. 파일을 다시 열어 보거나 다른 브라우저에서 실행해 주세요.","error");
+});
+loadSchedules();
+const today=localDateString();
+dateInput.min=today;
+render();
+if(!storageAvailable)showNotice("브라우저 저장소에 접근할 수 없습니다. 일정은 등록되더라도 새로고침 후 사라질 수 있습니다.","error");
+})();
+</script>
+</body>
+</html>
